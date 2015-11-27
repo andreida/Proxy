@@ -26,4 +26,16 @@ RequestInfo& ClientConnectionPolicy::CurrentMessage()
     return *requests.front();
 }
 
+void ClientConnectionPolicy::CurrentMessageSent()
+{
+    PendingRequests& requests = connectionManager_.Requests();
+
+    requests.pop();
+}
+
+void ClientConnectionPolicy::FillSendBuffer(ByteArray& buffer)
+{
+
+}
+
 }

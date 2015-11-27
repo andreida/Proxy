@@ -21,6 +21,7 @@ typedef std::shared_ptr<ConnectionManager> ConnectionManagerPtr;
 typedef std::function<void(ConnectionManagerPtr)> RemoveConnectionCallback;
 
 typedef std::queue<RequestInfoPtr> PendingRequests;
+typedef std::queue<ResponseInfoPtr> PendingResponses;
 
 class ConnectionManager : boost::noncopyable
     , public std::enable_shared_from_this<ConnectionManager>
@@ -46,10 +47,13 @@ public:
 
     PendingRequests& Requests();
 
+    PendingResponses& Responses();
+
 private:
 
     RemoveConnectionCallback removeConnection_;
     PendingRequests pendingRequests_;
+    PendingResponses pendingResponses_;
     ConnectionHandler<RequestParser, ClientConnectionPolicy> clientSide_;
     ConnectionHandler<ResponseParser, ServerConnectionPolicy> serverSide_;
 };

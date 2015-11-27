@@ -3,7 +3,8 @@
 
 namespace ProxyLib {
 
-ResponseInfoPtr ResponseParser::Parse(std::size_t size, ByteArray& buffer)
+ResponseInfoPtr ResponseParser::Parse(ByteArray::iterator& begin
+                                     , ByteArray::iterator end)
 {
     return ResponseInfoPtr();
 }

@@ -1,87 +1,118 @@
 #include "pch.h"
 #include "RequestParser.h"
 #include "RequestInfo.h"
+#include "Utility.h"
 
 #include <boost/spirit/include/qi.hpp>
 #include <boost/optional.hpp>
 
 #include <algorithm>
+#include <initializer_list>
 
 namespace ProxyLib {
 
 namespace qi = boost::spirit::qi;
 namespace ascii = qi::ascii;
 
-enum
+
+static const std::array<std::string, 2> methods_g = {"GET", "POST"};
+static const std::string connectionHeaderStr_g = "Connection";
+const auto newLine_g = { '\r', '\n' };
+const auto blankLine_g = { '\r', '\n', '\r', '\n' };
+
+bool HeadersReseived(ByteArray::iterator begin, ByteArray::iterator end)
 {
-    RequestMaxSize = 1024 * 64
-};
+    ByteArray::const_iterator it = std::search(begin, end, blankLine_g.begin()
+        , blankLine_g.end());
 
-bool HeadersReseived(const ByteArray& buffer)
-{
-    const char blankLine[] = "\r\n\r\n";
-
-    ByteArray::const_iterator it = std::search(buffer.begin(), buffer.end()
-        , blankLine, &blankLine[sizeof(blankLine - 1)]);
-
-    return (it != buffer.end());
+    return (it != end);
 }
 
-ConnectionOptions ProcessConnectionHeader(const boost::optional<StringList>& headers)
+typedef std::multimap<std::string, std::string
+    , LexicographicalCompare<std::string>> HeadersMap;
+
+HeadersMap GetHeadersMap(const StringList& clientHeaders)
+{
+    HeadersMap headers;
+
+    auto it = clientHeaders.begin();
+    while (it != clientHeaders.end())
+    {
+        auto value = ++it;
+        headers.emplace(*it, *value);
+
+        ++it;
+    }
+
+    return std::move(headers);
+}
+
+ConnectionOptions ProcessConnectionHeader(const boost::optional<StringList>& clientHeaders)
 {
     ConnectionOptions connectionOpt = Connection_KeepAlive;
-    if (headers.is_initialized())
+    if (clientHeaders)
     {
+        assert((clientHeaders->size() % 2) == 0);
+
+        const HeadersMap headersMap = GetHeadersMap(*clientHeaders);
         
+        auto range = headersMap.equal_range(connectionHeaderStr_g);
+
+        StringList connectionTokens;
+
+        if (range.first != range.second)
+        {
+            for (auto it = range.first; it != range.second; ++it)
+            {
+                const std::string& headerValue = it->second;
+
+                auto space = +(qi::lit('\t') | qi::lit(' '));
+                auto token = +(ascii::print - qi::lit(' ') | qi::lit('\t'));
+                
+                auto parser = *space
+                    >> *(token >> *(*space >> qi::lit(',') >> *space >> token));
+
+                std::string::const_iterator begin = headerValue.begin();
+                qi::parse(begin, headerValue.end(), parser, connectionTokens);
+            }
+        }
     }
 
     return connectionOpt;
 }
 
-std::uint32_t MessageLength(HttpMethods method, boost::optional<StringList> headers)
+std::uint32_t MessageBodyLength(HttpMethods method, boost::optional<StringList> headers)
 {
     return 0;
 }
 
-void RemoveFolding(ByteArray& buffer)
+void RemoveFolding(ByteArray::iterator begin, ByteArray::iterator end)
 {
     //todo
 }
 
-RequestInfoPtr RequestParser::Parse(std::size_t size, ByteArray& buffer)
+RequestInfoPtr RequestParser::Parse(ByteArray::iterator& begin
+                                   , ByteArray::iterator end)
 {
-    if (tempBuffer_.empty())
+    if (HeadersReseived(begin, end))
     {
-        tempBuffer_.swap(buffer);
-    }
-    else
-    {
-        tempBuffer_.insert(tempBuffer_.end(), &buffer[0], &buffer[size]);
-    }
+        RemoveFolding(begin, end);
 
-    if (HeadersReseived(tempBuffer_))
-    {
-        return ParseRequest();
-    }
-
-    if (RequestMaxSize <= tempBuffer_.size())
-    {
-        throw std::exception("too long request");
+        return ParseRequest(begin, end);
     }
 
     return RequestInfoPtr();
 }
 
-RequestInfoPtr RequestParser::ParseRequest()
+RequestInfoPtr RequestParser::ParseRequest(ByteArray::iterator& begin
+                                          , ByteArray::iterator end)
 {
-    RemoveFolding(tempBuffer_);
-
     qi::symbols<char, HttpMethods> knownMethods;
 
-    knownMethods.add("GET", Http_Get)
-        ("POST", Http_Post);
+    knownMethods.add(methods_g.at(Http_Get), Http_Get)
+        (methods_g.at(Http_Post), Http_Post);
 
-    auto entry = +(ascii::print - (qi::lit(':') | qi::lit('@') | qi::lit(' ')));
+    auto entry = +(ascii::print - (qi::lit(':') | qi::lit('@') | qi::lit(' ') | qi::lit('\t')));
 
     auto url = "http://"
         >> -(entry >> ':' >> entry >> '@')
@@ -102,8 +133,6 @@ RequestInfoPtr RequestParser::ParseRequest()
         >> requestHeaders
         >> "\r\n\r\n";
 
-    ByteArray::iterator begin = tempBuffer_.begin();
-
     HttpMethods method = Http_Get;
     boost::optional<StringList> cred;
     std::string host;
@@ -111,33 +140,79 @@ RequestInfoPtr RequestParser::ParseRequest()
     boost::optional<std::string> resource;
     boost::optional<StringList> headers;
     
-    if (qi::parse(begin, tempBuffer_.end(), requestParser, method
+    RequestInfoPtr requestInfo;
+    if (qi::parse(begin, end, requestParser, method
         , cred, host, port, resource, headers))
     {
         const ConnectionOptions connectionOptions = ProcessConnectionHeader(headers);
-        const std::uint32_t messageLength = MessageLength(method, headers);
+        const std::uint32_t messageLength = MessageBodyLength(method, headers);
 
-        FillRequestBuffer(method, host, port, resource, headers, begin);
+        ByteArray requestBuffer = CreateRequestBuffer(method, host, resource, headers);
 
-        return std::make_unique<RequestInfo>(std::move(host), port, connectionOptions
-            , messageLength, std::move(tempBuffer_));
+        requestInfo = std::make_unique<RequestInfo>(std::move(host), port, connectionOptions
+            , messageLength, std::move(requestBuffer));
     }
     else
     {
         throw std::exception("invalid request");
     }
 
-    return RequestInfoPtr();
+    return std::move(requestInfo);
 }
 
-void RequestParser::FillRequestBuffer(HttpMethods method
-                                     , const std::string& host
-                                     , const boost::optional<std::uint16_t>& port
-                                     , const boost::optional<std::string>& resource
-                                     , const boost::optional<StringList>& headers
-                                     , ByteArray::iterator messageBodyPos)
+ByteArray RequestParser::CreateRequestBuffer(HttpMethods method
+                                            , const std::string& host
+                                            , const boost::optional<std::string>& resource
+                                            , const boost::optional<StringList>& clientHeaders)
 {
+    const std::string& methodStr = methods_g.at(method);
 
+    ByteArray requestBuffer(methodStr.begin(), methodStr.end());
+
+    Append(' ', requestBuffer);
+
+    Append('/', requestBuffer);
+
+    if (resource)
+    {
+        Append(resource->begin(), resource->end(), requestBuffer);
+    }
+
+    Append({' ', 'H', 'T', 'T', 'P', '/', '1', '.', '1', '\r', '\n', 'H', 'o'
+        , 's', 't', ':', ' ' }, requestBuffer);
+
+    Append(host.begin(), host.end(), requestBuffer);
+
+    if (clientHeaders)
+    {
+        AppendHeaders(*clientHeaders, requestBuffer);
+    }
+
+    Append(blankLine_g, requestBuffer);
+
+    return std::move(requestBuffer);
+}
+
+void RequestParser::AppendHeaders(const StringList& clientHeaders
+                                 , ByteArray& requestBuffer)
+{
+    assert((clientHeaders.size() % 2) == 0);
+
+    StringList::const_iterator it = clientHeaders.begin();
+    while (it != clientHeaders.end())
+    {
+        Append(newLine_g, requestBuffer);
+
+        Append(it->begin(), it->end(), requestBuffer);
+        
+        Append({ ':', ' ' }, requestBuffer);
+
+        ++it;
+
+        Append(it->begin(), it->end(), requestBuffer);
+
+        ++it;
+    }
 }
 
 }

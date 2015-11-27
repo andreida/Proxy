@@ -17,6 +17,10 @@ public:
 
     ResponseInfo& CurrentMessage();
 
+    void CurrentMessageSent();
+
+    void FillSendBuffer(ByteArray& buffer);
+
 private:
 
     ConnectionManager& connectionManager_;

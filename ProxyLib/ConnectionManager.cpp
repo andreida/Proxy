@@ -7,6 +7,7 @@ namespace ProxyLib {
 ConnectionManager::ConnectionManager(RemoveConnectionCallback removeConnection)
     : removeConnection_(removeConnection)
     , pendingRequests_()
+    , pendingResponses_()
     , clientSide_(*this)
     , serverSide_(*this)
 {}
@@ -31,7 +32,7 @@ void ConnectionManager::OnDataSentToClient(std::size_t size)
 
 void ConnectionManager::OnServerConnected()
 {
-    clientSide_.OnConnected();
+    serverSide_.OnDataSent(0);
 }
 
 void ConnectionManager::OnServerDataArrival(std::size_t size
@@ -65,5 +66,9 @@ PendingRequests& ConnectionManager::Requests()
     return pendingRequests_;
 }
 
+PendingResponses& ConnectionManager::Responses()
+{
+    return pendingResponses_;
+}
 
 }

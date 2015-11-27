@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Common.h"
-#include "ResponseInfo.h"
 
 namespace ProxyLib {
 
@@ -11,33 +10,31 @@ public:
     RequestInfo(std::string host
                , std::uint16_t port
                , ConnectionOptions connectionOptions
-               , std::uint32_t messageLength
+               , std::uint32_t bodyLength
                , ByteArray requestBuffer);
 
     const std::string& Host() const;
 
     std::uint16_t Port() const;
 
-    ByteArray Buffer();
+    ByteArray& Buffer();
 
-    bool IsComplete() const;
+    void SetBytesSent(std::size_t size);
 
-    void SetBytesTransfered(std::size_t size);
+    void SetMessageBodyChunk(ByteArray::const_iterator begin
+                            , ByteArray::const_iterator end);
 
-    void ProcessChunk(const char* buffer, std::size_t size);
+    std::size_t BodyLength() const;
 
-    void SetResponseInfo(ResponseInfoPtr responseInfo);
-
-    ResponseInfo& Response();
+    std::size_t BytesLeftToSend() const;
 
 private:
 
-    const std::string host_;
-    const std::uint16_t port_;
+    const std::string       host_;
+    const std::uint16_t     port_;
     const ConnectionOptions connectionOptions_;
-    const std::uint32_t messageLength_;
-    ByteArray requestBuffer_;
-    ResponseInfoPtr responseInfo_;
+    const std::uint32_t     bodyLength_;
+    ByteArray               requestBuffer_;
 };
 
 typedef std::unique_ptr<RequestInfo> RequestInfoPtr;

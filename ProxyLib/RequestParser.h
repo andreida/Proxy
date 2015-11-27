@@ -19,20 +19,21 @@ public:
     typedef RequestInfo MessageT;
     typedef RequestInfoPtr ResultT;
 
-    RequestInfoPtr Parse(std::size_t size, ByteArray& buffer);
+    static RequestInfoPtr Parse(ByteArray::iterator& begin
+                               , ByteArray::iterator end);
 
 private:
 
-    RequestInfoPtr ParseRequest();
+    static RequestInfoPtr ParseRequest(ByteArray::iterator& begin
+                                      , ByteArray::iterator end);
 
-    void FillRequestBuffer(HttpMethods method
-                          , const std::string& host
-                          , const boost::optional<std::uint16_t>& port
-                          , const boost::optional<std::string>& resource
-                          , const boost::optional<StringList>& headers
-                          , ByteArray::iterator messageBodyPos);
+    static ByteArray CreateRequestBuffer(HttpMethods method
+                                        , const std::string& host
+                                        , const boost::optional<std::string>& resource
+                                        , const boost::optional<StringList>& headers);
 
-    ByteArray tempBuffer_;
+    static void AppendHeaders(const StringList& clientHeaders
+                             , ByteArray& requestBuffer);
 };
 
 }

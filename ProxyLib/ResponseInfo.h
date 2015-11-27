@@ -9,14 +9,16 @@ class ResponseInfo : boost::noncopyable
 public:
     ResponseInfo();
 
-    ByteArray Buffer();
+    ByteArray& Buffer();
 
-    bool IsComplete() const;
+    void SetBytesSent(std::size_t size);
 
-    void SetBytesTransfered(std::size_t size);
+    void SetMessageBodyChunk(ByteArray::const_iterator begin
+                            , ByteArray::const_iterator end);
 
-    void ProcessChunk(const char* buffer, std::size_t size);
+    std::size_t BodyLength() const;
 
+    std::size_t BytesLeftToSend() const;
 };
 
 typedef std::unique_ptr<ResponseInfo> ResponseInfoPtr;

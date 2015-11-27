@@ -8,8 +8,7 @@ Connection::Connection(asio::ip::tcp::socket socket
                       , const ConnectionHandlers& handlers)
     : socket_(std::move(socket))
     , resolver_(socket_.get_io_service())
-    , readBuffer_(ByteArrayMaxSize)
-    , writeBuffer_(ByteArrayMaxSize)
+    , readBuffer_(ByteArrayDefaultSize)
     , handlers_(handlers)
 {}
 
@@ -77,6 +76,8 @@ void Connection::ReadAsync()
             }
 
             handlers_.OnDataArrival(bytesRead, readBuffer_);
+
+            readBuffer_.resize(ByteArrayDefaultSize);
         }
         catch (const std::exception& e)
         {
@@ -85,13 +86,13 @@ void Connection::ReadAsync()
     });
 }
 
-void Connection::WriteAsync(std::size_t size, ByteArray& buffer)
+void Connection::WriteAsync(const ByteArray& buffer)
 {
     assert(socket_.is_open());
 
     ConnectionPtr self(shared_from_this());
 
-    asio::async_write(socket_, asio::buffer(buffer, size)
+    asio::async_write(socket_, asio::buffer(buffer)
         , [this, self](const boost::system::error_code& ec, std::size_t size)
     {
         try

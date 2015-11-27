@@ -6,14 +6,13 @@ namespace ProxyLib {
 RequestInfo::RequestInfo(std::string host
                         , std::uint16_t port
                         , ConnectionOptions connectionOptions
-                        , std::uint32_t messageLength
+                        , std::uint32_t bodyLength
                         , ByteArray requestBuffer)
     : host_(std::move(host))
     , port_(port)
     , connectionOptions_(connectionOptions)
-    , messageLength_(messageLength)
+    , bodyLength_(bodyLength)
     , requestBuffer_(std::move(requestBuffer))
-    , responseInfo_()
 {}
 
 const std::string& RequestInfo::Host() const
@@ -26,34 +25,30 @@ std::uint16_t RequestInfo::Port() const
     return port_;
 }
 
-ByteArray RequestInfo::Buffer()
+ByteArray& RequestInfo::Buffer()
 {
-    return std::move(requestBuffer_);
+    return requestBuffer_;
 }
 
-bool RequestInfo::IsComplete() const
-{
-    return false;
-}
-
-void RequestInfo::SetBytesTransfered(std::size_t size)
+void RequestInfo::SetBytesSent(std::size_t size)
 {
 
 }
 
-void RequestInfo::ProcessChunk(const char* buffer, std::size_t size)
+void RequestInfo::SetMessageBodyChunk(ByteArray::const_iterator begin
+                                     , ByteArray::const_iterator end)
 {
 
 }
 
-void RequestInfo::SetResponseInfo(ResponseInfoPtr responseInfo)
+std::uint32_t RequestInfo::BodyLength() const
 {
-    responseInfo_ = std::move(responseInfo);
+    return 0;
 }
 
-ResponseInfo& RequestInfo::Response()
+std::size_t RequestInfo::BytesLeftToSend() const
 {
-    return *responseInfo_;
+    return 0;
 }
 
 }

@@ -7,24 +7,30 @@ ResponseInfo::ResponseInfo()
 {
 }
 
-ByteArray ResponseInfo::Buffer()
+ByteArray& ResponseInfo::Buffer()
 {
     return ByteArray();
 }
 
-bool ResponseInfo::IsComplete() const
-{
-    return false;
-}
-
-void ResponseInfo::SetBytesTransfered(std::size_t size)
+void ResponseInfo::SetBytesSent(std::size_t size)
 {
 
 }
 
-void ResponseInfo::ProcessChunk(const char* buffer, std::size_t size)
+void ResponseInfo::SetMessageBodyChunk(ByteArray::const_iterator begin
+                                      , ByteArray::const_iterator end)
 {
 
+}
+
+std::size_t ResponseInfo::BodyLength() const
+{
+    return 0;
+}
+
+std::size_t ResponseInfo::BytesLeftToSend() const
+{
+    return 0;
 }
 
 }

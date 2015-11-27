@@ -1,109 +1,32 @@
 #pragma once
 
 #include "IConnection.h"
+#include "Utility.h"
 
 namespace ProxyLib {
 
-class ConnectionManager;
-
-template <class ParserT, class PolicyT>
-class ConnectionHandler : boost::noncopyable
+class ConnectionHandlerBase : boost::noncopyable
 {
-    typedef typename ParserT::MessageT MessageT;
-    typedef typename ParserT::ResultT MessagePtrT;
-
 public:
 
-    ConnectionHandler(ConnectionManager& connectionManager)
-        : connectionPolicy_(connectionManager)
-        , state_(State_WaitMessage)
-        , parser_()
-        , client_()
-        , server_()
-    {}
+    void SetConnections(IConnection& client, IConnection& server);
 
-    void SetConnections(IConnection& client
-        , IConnection& server)
+    bool IsClient(const IConnection* connection) const;
+
+    void Stop();
+
+protected:
+
+    ConnectionHandlerBase();
+
+    ~ConnectionHandlerBase();
+
+    void SetBuffer(std::size_t size, ByteArray& buffer);
+
+    enum
     {
-        client_ = &client;
-        server_ = &server;
-    }
-
-    void OnDataArrival(std::size_t size, ByteArray& buffer)
-    {
-        if (state_ == State_WaitMessage)
-        {
-            MessagePtrT message = parser_.Parse(size, buffer);
-
-            if (message)
-            {
-                connectionPolicy_.ProcessNewMessage(*server_, std::move(message));
-
-                state_ = State_WaitDataSent;
-            }
-        }
-        else
-        {
-            assert(state_ == State_WaitData);
-
-            MessageT& message = connectionPolicy_.CurrentMessage();
-            message.ProcessChunk(buffer.data(), size);
-
-            server_->WriteAsync(size, buffer);
-
-            state_ = State_WaitDataSent;
-        }
-
-        if (state_ != State_WaitDataSent)
-        {
-            client_->ReadAsync();
-        }
-    }
-
-    void OnDataSent(std::size_t size)
-    {
-        assert(state_ == State_WaitDataSent);
-
-        MessageT& message = connectionPolicy_.CurrentMessage();
-
-        message.SetBytesTransfered(size);
-
-        if (message.IsComplete())
-        {
-            state_ = State_WaitMessage;
-            server_->ReadAsync();
-        }
-        else
-        {
-            state_ = State_WaitData;
-        }
-
-        client_->ReadAsync();
-    }
-
-    void OnConnected()
-    {
-        assert(state_ == State_WaitDataSent);
-
-        MessageT& message = connectionPolicy_.CurrentMessage();
-
-        ByteArray buffer = message.Buffer();
-
-        const std::size_t size = buffer.size();
-        server_->WriteAsync(size, std::move(buffer));
-    }
-
-    bool IsClient(const IConnection* connection) const
-    {
-        return (client_ == connection);
-    }
-
-    void Stop()
-    {
-        client_->Stop();
-    }
-
-private:
+        RequestMaxSize = 1024 * 64
+    };
 
     enum State
     {
@@ -112,11 +35,115 @@ private:
         State_WaitDataSent
     };
 
-    PolicyT connectionPolicy_;
-    State   state_;
-    ParserT parser_;
+    State        state_;
+    ByteArray    buffer_;
     IConnection* client_;
     IConnection* server_;
+};
+
+class ConnectionManager;
+
+template <class ParserT, class PolicyT>
+class ConnectionHandler : public ConnectionHandlerBase
+{
+    typedef typename ParserT::MessageT MessageT;
+    typedef typename ParserT::ResultT MessagePtrT;
+
+public:
+
+    ConnectionHandler(ConnectionManager& connectionManager)
+        : connectionPolicy_(connectionManager)
+        , parser_()
+        , sendBuffer_()
+    {}
+
+    void OnDataArrival(std::size_t size, ByteArray& buffer)
+    {
+        assert(size <= buffer.size());
+
+        SetBuffer(size, buffer);
+        
+        ByteArray::iterator begin = buffer_.begin();
+        ByteArray::iterator end = begin + size;
+
+        while (begin != end)
+        {
+            if (state_ == State_WaitMessage)
+            {
+                MessagePtrT message = parser_.Parse(begin, end);
+
+                if (message)
+                {
+                    connectionPolicy_.ProcessNewMessage(*server_, std::move(message));
+
+                    if (0 < message->BodyLength())
+                    {
+                        state_ = State_WaitData;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+            else
+            {
+                MessageT& message = connectionPolicy_.CurrentMessage();
+
+                assert((0 < message.BodyLength()) && (state_ == State_WaitData));
+
+                ByteArray::iterator messageEnd = end;
+                if (message.BodyLength() <= std::distance(begin, end))
+                {
+                    messageEnd = begin + message.BodyLength();
+                    state_ = State_WaitMessage;
+                }
+
+                message.SetMessageBodyChunk(begin, messageEnd);
+
+                begin = messageEnd;
+            }
+        }
+
+        if (begin != buffer_.begin())
+        {
+            buffer_.swap(ByteArray(begin, end));
+        }
+
+        client_->ReadAsync();
+    }
+
+    void OnDataSent(std::size_t size)
+    {
+        while (0 < size)
+        {
+            MessageT& message = connectionPolicy_.CurrentMessage();
+
+            const std::size_t bytesLeft = message.BytesLeftToSend();
+
+            message.SetBytesSent(size);
+
+            if (bytesLeft <= size)
+            {
+                connectionPolicy_.CurrentMessageSent();
+                size -= bytesLeft;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        connectionPolicy_.FillSendBuffer(sendBuffer_);
+
+        server_->WriteAsync(sendBuffer_);
+    }
+
+private:
+
+    PolicyT   connectionPolicy_;
+    ParserT   parser_;
+    ByteArray sendBuffer_;
 };
 
 }

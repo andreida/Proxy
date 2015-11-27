@@ -28,7 +28,7 @@ public:
 
     virtual void ReadAsync();
 
-    virtual void WriteAsync(std::size_t size, ByteArray& buffer);
+    virtual void WriteAsync(const ByteArray& buffer);
 
     virtual void Stop();
 
@@ -36,8 +36,7 @@ private:
 
     asio::ip::tcp::socket    socket_;
     asio::ip::tcp::resolver  resolver_;
-    ByteArray         readBuffer_;
-    ByteArray         writeBuffer_;
+    ByteArray                readBuffer_;
     const ConnectionHandlers handlers_;
 };
 

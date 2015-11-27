@@ -6,7 +6,7 @@ namespace asio = boost::asio;
 
 enum
 {
-    ByteArrayMaxSize = 4096
+    ByteArrayDefaultSize = 4096
 };
 
 enum ConnectionOptions

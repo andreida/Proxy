@@ -12,25 +12,30 @@ ServerConnectionPolicy::ServerConnectionPolicy(ConnectionManager& connectionMana
 void ServerConnectionPolicy::ProcessNewMessage(IConnection& client
                                               , ResponseInfoPtr responseInfo)
 {
-    ByteArray responseBuffer = responseInfo->Buffer();
-    const std::size_t requestBufferSize = responseBuffer.size();
+    client.WriteAsync(responseInfo->Buffer());
 
-    client.WriteAsync(requestBufferSize, responseBuffer);
+    PendingResponses& responses = connectionManager_.Responses();
 
-    PendingRequests& requests = connectionManager_.Requests();
-
-    RequestInfo& requestInfo = *requests.back();
-
-    requestInfo.SetResponseInfo(std::move(responseInfo));
+    responses.push(std::move(responseInfo));
 }
 
 ResponseInfo& ServerConnectionPolicy::CurrentMessage()
 {
-    PendingRequests& requests = connectionManager_.Requests();
-
-    RequestInfo& requestInfo = *requests.back();
+    PendingResponses& responses = connectionManager_.Responses();
     
-    return requestInfo.Response();
+    return *responses.back();
+}
+
+void ServerConnectionPolicy::CurrentMessageSent()
+{
+    PendingResponses& responses = connectionManager_.Responses();
+
+    responses.pop();
+}
+
+void ServerConnectionPolicy::FillSendBuffer(ByteArray& buffer)
+{
+
 }
 
 }
