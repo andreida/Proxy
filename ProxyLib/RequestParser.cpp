@@ -3,7 +3,6 @@
 #include "RequestInfo.h"
 #include "Utility.h"
 
-#include <boost/spirit/include/qi.hpp>
 #include <boost/optional.hpp>
 
 #include <algorithm>
@@ -91,6 +90,39 @@ void RemoveFolding(ByteArray::iterator begin, ByteArray::iterator end)
     //todo
 }
 
+RequestParser::RequestParser()
+    : spaceParser_()
+    , entryParser_()
+    , methodsParser_()
+    , urlParser_()
+    , requestHeadersParser_()
+    , requestParser_()
+{
+    spaceParser_ = +(qi::lit('\t') | qi::lit(' '));
+
+    entryParser_ = +(ascii::print - (qi::lit(':') | qi::lit('@') | qi::lit(' ') | qi::lit('\t')));
+
+    urlParser_ = "http://"
+        >> -(entryParser_ >> ':' >> entryParser_ >> '@')
+        >> entryParser_
+        >> (-(':' >> qi::ushort_))
+        >> -('/' >> -entryParser_);
+
+    methodsParser_.add(methods_g.at(Http_Get), Http_Get)
+        (methods_g.at(Http_Post), Http_Post);
+
+    requestHeadersParser_ = *("\r\n" >> spaceParser_ >> ':' >> *spaceParser_ >> *ascii::print);
+
+    requestParser_ = *spaceParser_
+        >> methodsParser_
+        >> +spaceParser_
+        >> urlParser_
+        >> +spaceParser_
+        >> "HTTP1/1"
+        >> requestHeadersParser_
+        >> "\r\n\r\n";
+}
+
 RequestInfoPtr RequestParser::Parse(ByteArray::iterator& begin
                                    , ByteArray::iterator end)
 {
@@ -107,41 +139,18 @@ RequestInfoPtr RequestParser::Parse(ByteArray::iterator& begin
 RequestInfoPtr RequestParser::ParseRequest(ByteArray::iterator& begin
                                           , ByteArray::iterator end)
 {
-    qi::symbols<char, HttpMethods> knownMethods;
+    RequestTuple res;
+    qi::parse(begin, end, requestParser_, res);
 
-    knownMethods.add(methods_g.at(Http_Get), Http_Get)
-        (methods_g.at(Http_Post), Http_Post);
-
-    auto entry = +(ascii::print - (qi::lit(':') | qi::lit('@') | qi::lit(' ') | qi::lit('\t')));
-
-    auto url = "http://"
-        >> -(entry >> ':' >> entry >> '@')
-        >> entry
-        >> (-(':' >> qi::ushort_))
-        >> -('/' >> -entry);
-
-    auto space = +(qi::lit('\t') | qi::lit(' '));
-
-    auto requestHeaders = *("\r\n" >> entry >> ':' >> *space >> *ascii::print);
-
-    auto requestParser = *space
-        >> knownMethods
-        >> +space
-        >> url
-        >> +space
-        >> "HTTP1/1"
-        >> requestHeaders
-        >> "\r\n\r\n";
-
-    HttpMethods method = Http_Get;
+    /*HttpMethods method = Http_Get;
     boost::optional<StringList> cred;
     std::string host;
     boost::optional<std::uint16_t> port;
     boost::optional<std::string> resource;
-    boost::optional<StringList> headers;
+    boost::optional<StringList> headers;*/
     
     RequestInfoPtr requestInfo;
-    if (qi::parse(begin, end, requestParser, method
+    /*if (qi::parse(begin, end, requestParser, method
         , cred, host, port, resource, headers))
     {
         const ConnectionOptions connectionOptions = ProcessConnectionHeader(headers);
@@ -155,7 +164,7 @@ RequestInfoPtr RequestParser::ParseRequest(ByteArray::iterator& begin
     else
     {
         throw std::exception("invalid request");
-    }
+    }*/
 
     return std::move(requestInfo);
 }
