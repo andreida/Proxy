@@ -46,8 +46,8 @@ class ConnectionManager;
 template <class ParserT, class PolicyT>
 class ConnectionHandler : public ConnectionHandlerBase
 {
-    typedef typename ParserT::MessageT MessageT;
     typedef typename ParserT::ResultT MessagePtrT;
+    typedef typename MessagePtrT::element_type MessageT;
 
 public:
 

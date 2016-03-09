@@ -140,33 +140,29 @@ RequestInfoPtr RequestParser::ParseRequest(ByteArray::iterator& begin
                                           , ByteArray::iterator end)
 {
     RequestTuple res;
-    qi::parse(begin, end, requestParser_, res);
-
-    /*HttpMethods method = Http_Get;
-    boost::optional<StringList> cred;
-    std::string host;
-    boost::optional<std::uint16_t> port;
-    boost::optional<std::string> resource;
-    boost::optional<StringList> headers;*/
-    
-    RequestInfoPtr requestInfo;
-    /*if (qi::parse(begin, end, requestParser, method
-        , cred, host, port, resource, headers))
+    if (qi::parse(begin, end, requestParser_, res))
     {
-        const ConnectionOptions connectionOptions = ProcessConnectionHeader(headers);
-        const std::uint32_t messageLength = MessageBodyLength(method, headers);
+        auto headers = boost::fusion::find<boost::optional<StringList>>(res);
+        const ConnectionOptions connectionOptions = ProcessConnectionHeader(*headers);
 
-        ByteArray requestBuffer = CreateRequestBuffer(method, host, resource, headers);
+        auto method = boost::fusion::find<HttpMethods>(res);
+        const std::uint32_t messageLength = MessageBodyLength(*method, *headers);
+        
+        auto url = boost::fusion::find<UrlTuple>(res);
+        auto host = boost::fusion::find<std::string>(*url);
+        auto resource = boost::fusion::find<boost::optional<std::string>>(*url);
+        ByteArray requestBuffer = CreateRequestBuffer(*method, *host, *resource, *headers);
 
-        requestInfo = std::make_unique<RequestInfo>(std::move(host), port, connectionOptions
-            , messageLength, std::move(requestBuffer));
+        auto port = boost::fusion::find<boost::optional<std::uint16_t>>(*url);
+
+        return std::make_unique<RequestInfo>(std::move(*host)
+            , (*port).is_initialized() ? *port : 80
+            , connectionOptions, messageLength, std::move(requestBuffer));
     }
     else
     {
         throw std::exception("invalid request");
-    }*/
-
-    return std::move(requestInfo);
+    }
 }
 
 ByteArray RequestParser::CreateRequestBuffer(HttpMethods method

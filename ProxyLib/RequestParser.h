@@ -18,7 +18,6 @@ enum HttpMethods
 class RequestParser
 {
 public:
-    typedef RequestInfo MessageT;
     typedef RequestInfoPtr ResultT;
 
     RequestParser();
@@ -31,7 +30,7 @@ private:
     typedef boost::fusion::vector<boost::optional<StringList>
         , std::string
         , boost::optional<std::uint16_t>
-        , boost::optional <std::string>> UrlTuple;
+        , boost::optional<std::string>> UrlTuple;
 
     typedef boost::spirit::qi::rule<ByteArray::iterator, std::string()> UrlEntryParser;
     typedef boost::spirit::qi::rule<ByteArray::iterator, UrlTuple()> UrlParser;
@@ -40,12 +39,12 @@ private:
 
     typedef boost::fusion::vector <HttpMethods
         , UrlTuple
-        , boost::optional <StringList>> RequestTuple;
+        , boost::optional<StringList>> RequestTuple;
     typedef boost::spirit::qi::rule<ByteArray::iterator, RequestTuple()> HttpRequestParser;
 
 
     RequestInfoPtr ParseRequest(ByteArray::iterator& begin
-                                      , ByteArray::iterator end);
+                               , ByteArray::iterator end);
 
     static ByteArray CreateRequestBuffer(HttpMethods method
                                         , const std::string& host
