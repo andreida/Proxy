@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace ProxyLib {
 
 class ServerImpl;
@@ -7,7 +9,7 @@ class ServerImpl;
 class Server
 {
 public:
-    Server(unsigned short port);
+    Server(std::uint16_t port);
 
     Server(const Server&) = delete;
 

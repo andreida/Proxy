@@ -1,8 +1,9 @@
 #pragma once
 
-namespace ProxyLib {
+#include <string>
+#include <vector>
 
-namespace asio = boost::asio;
+namespace ProxyLib {
 
 enum
 {

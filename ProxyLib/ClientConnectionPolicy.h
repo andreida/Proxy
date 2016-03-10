@@ -2,6 +2,8 @@
 
 #include "RequestInfo.h"
 
+#include <boost/noncopyable.hpp>
+
 namespace ProxyLib {
 
 struct IConnection;

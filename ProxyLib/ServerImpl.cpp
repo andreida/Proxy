@@ -4,9 +4,11 @@
 
 namespace ProxyLib {
 
+using boost::asio::ip::tcp;
+
 ServerImpl::ServerImpl(std::uint16_t port)
     : ioService_()
-    , acceptor_(ioService_, {asio::ip::tcp::v4(), port})
+    , acceptor_(ioService_, {tcp::v4(), port})
     , socket_(ioService_)
 {
     DoAccept();
@@ -51,7 +53,7 @@ void ServerImpl::DoAccept()
             , std::bind(&ConnectionManager::OnDataSentToClient, manager, _1)
             , std::bind(&ConnectionManager::Stop, manager, _1) };
 
-        ConnectionPtr server = std::make_shared<Connection>(asio::ip::tcp::socket(ioService_)
+        ConnectionPtr server = std::make_shared<Connection>(tcp::socket(ioService_)
             , serverHandlers);
 
         manager->SetConnections(*client, *server);

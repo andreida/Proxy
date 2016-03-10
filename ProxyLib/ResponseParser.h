@@ -9,7 +9,6 @@ class ResponseParser
 {
 public:
     
-    typedef ResponseInfo MessageT;
     typedef ResponseInfoPtr ResultT;
 
     static ResponseInfoPtr Parse(ByteArray::iterator& begin

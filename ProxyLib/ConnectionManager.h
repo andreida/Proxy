@@ -9,6 +9,10 @@
 
 #include "ConnectionHandler.h"
 
+#include <memory>
+#include <queue>
+#include <functional>
+
 namespace ProxyLib {
 
 struct IConnection;

@@ -4,6 +4,8 @@
 
 namespace ProxyLib {
 
+namespace asio = boost::asio;
+
 Connection::Connection(asio::ip::tcp::socket socket
                       , const ConnectionHandlers& handlers)
     : socket_(std::move(socket))

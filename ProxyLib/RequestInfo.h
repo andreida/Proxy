@@ -2,6 +2,11 @@
 
 #include "Common.h"
 
+#include <boost/noncopyable.hpp>
+
+#include <cstdint>
+#include <memory>
+
 namespace ProxyLib {
 
 class RequestInfo : boost::noncopyable

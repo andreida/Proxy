@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Proxy", "Proxy\Proxy.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProxyLib", "ProxyLib\ProxyLib.vcxproj", "{F939F848-84F1-4345-AB59-24B809170D77}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProxyTests", "ProxyTests\ProxyTests.vcxproj", "{00DD8B59-F434-4C98-A04B-02A890C21F82}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -21,6 +23,10 @@ Global
 		{F939F848-84F1-4345-AB59-24B809170D77}.Debug|Win32.Build.0 = Debug|Win32
 		{F939F848-84F1-4345-AB59-24B809170D77}.Release|Win32.ActiveCfg = Release|Win32
 		{F939F848-84F1-4345-AB59-24B809170D77}.Release|Win32.Build.0 = Release|Win32
+		{00DD8B59-F434-4C98-A04B-02A890C21F82}.Debug|Win32.ActiveCfg = Debug|Win32
+		{00DD8B59-F434-4C98-A04B-02A890C21F82}.Debug|Win32.Build.0 = Debug|Win32
+		{00DD8B59-F434-4C98-A04B-02A890C21F82}.Release|Win32.ActiveCfg = Release|Win32
+		{00DD8B59-F434-4C98-A04B-02A890C21F82}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

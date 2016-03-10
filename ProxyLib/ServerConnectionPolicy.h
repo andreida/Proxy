@@ -2,6 +2,8 @@
 
 #include "ResponseInfo.h"
 
+#include <boost/noncopyable.hpp>
+
 namespace ProxyLib {
 
 struct IConnection;

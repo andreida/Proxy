@@ -1,5 +1,9 @@
 #pragma once
 
+#include <vector>
+#include <initializer_list>
+#include <algorithm>
+
 namespace ProxyLib {
 
 template <class T, class Alloc>

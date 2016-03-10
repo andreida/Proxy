@@ -5,6 +5,12 @@
 #include "Connection.h"
 #include "ConnectionManager.h"
 
+#include <boost/noncopyable.hpp>
+#include <boost/asio.hpp>
+
+#include <cstdint>
+#include <map>
+
 namespace ProxyLib {
 
 typedef std::pair<ConnectionPtr, ConnectionPtr> ConnectionUnit;
@@ -22,9 +28,9 @@ private:
 
     void DoAccept();
 
-    asio::io_service ioService_;
-    asio::ip::tcp::acceptor acceptor_;
-    asio::ip::tcp::socket socket_;
+    boost::asio::io_service                        ioService_;
+    boost::asio::ip::tcp::acceptor                 acceptor_;
+    boost::asio::ip::tcp::socket                   socket_;
       
     std::map<ConnectionManagerPtr, ConnectionUnit> activeConnections_;
 };

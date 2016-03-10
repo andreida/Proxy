@@ -3,6 +3,8 @@
 #include "IConnection.h"
 #include "Utility.h"
 
+#include <boost/noncopyable.hpp>
+
 namespace ProxyLib {
 
 class ConnectionHandlerBase : boost::noncopyable

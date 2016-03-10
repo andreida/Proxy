@@ -3,6 +3,11 @@
 #include "IConnection.h"
 #include "ConnectionManager.h"
 
+#include <functional>
+#include <memory>
+
+#include <boost/asio.hpp>
+
 namespace ProxyLib {
 
 typedef std::function<void()> ConnectedHandler;
@@ -22,7 +27,8 @@ class Connection : public IConnection
     , public std::enable_shared_from_this<Connection>
 {
 public:
-    Connection(asio::ip::tcp::socket socket, const ConnectionHandlers& handlers);
+    Connection(boost::asio::ip::tcp::socket socket
+              , const ConnectionHandlers& handlers);
 
     virtual void ConnectAsync(const std::string& host, std::uint16_t port);
 
@@ -34,10 +40,10 @@ public:
 
 private:
 
-    asio::ip::tcp::socket    socket_;
-    asio::ip::tcp::resolver  resolver_;
-    ByteArray                readBuffer_;
-    const ConnectionHandlers handlers_;
+    boost::asio::ip::tcp::socket   socket_;
+    boost::asio::ip::tcp::resolver resolver_;
+    ByteArray                      readBuffer_;
+    const ConnectionHandlers       handlers_;
 };
 
 typedef std::shared_ptr<Connection> ConnectionPtr;

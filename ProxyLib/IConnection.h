@@ -2,6 +2,10 @@
 
 #include "Common.h"
 
+#include <boost/noncopyable.hpp>
+
+#include <cstdint>
+
 namespace ProxyLib {
 
 struct IConnection : boost::noncopyable

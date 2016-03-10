@@ -2,6 +2,8 @@
 
 #include "Common.h"
 
+#include <memory>
+
 namespace ProxyLib {
 
 class ResponseInfo : boost::noncopyable
