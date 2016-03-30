@@ -22,7 +22,7 @@ public:
 
     std::uint16_t Port() const;
 
-    ByteArray& Buffer();
+    const ByteArray& Buffer() const;
 
     void SetBytesSent(std::size_t size);
 

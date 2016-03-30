@@ -16,16 +16,8 @@ namespace ascii = qi::ascii;
 
 static const std::array<std::string, 2> methods_g = {"GET", "POST"};
 static const std::string connectionHeaderStr_g = "Connection";
-const auto newLine_g = { '\r', '\n' };
-const auto blankLine_g = { '\r', '\n', '\r', '\n' };
-
-bool HeadersReseived(ByteArray::iterator begin, ByteArray::iterator end)
-{
-    ByteArray::const_iterator it = std::search(begin, end, blankLine_g.begin()
-        , blankLine_g.end());
-
-    return (it != end);
-}
+static const auto newLine_g = { '\r', '\n' };
+static const auto blankLine_g = { '\r', '\n', '\r', '\n' };
 
 typedef std::multimap<std::string, std::string
     , LexicographicalCompare<std::string>> HeadersMap;
@@ -93,6 +85,7 @@ void RemoveFolding(ByteArray::iterator begin, ByteArray::iterator end)
 RequestParser::RequestParser()
     : spaceParser_()
     , entryParser_()
+    , resourceParser_()
     , methodsParser_()
     , urlParser_()
     , requestHeadersParser_()
@@ -100,13 +93,18 @@ RequestParser::RequestParser()
 {
     spaceParser_ = +(qi::lit('\t') | qi::lit(' '));
 
-    entryParser_ = +(ascii::print - (qi::lit(':') | qi::lit('@') | qi::lit(' ') | qi::lit('\t')));
+    auto urlChar = (ascii::print - (qi::lit(':') | qi::lit('@') | qi::lit(' ')
+        | qi::lit('\t')));
+
+    entryParser_ = +(urlChar - qi::lit('/'));
+
+    resourceParser_ = *urlChar;
 
     urlParser_ = "http://"
         >> -(entryParser_ >> ':' >> entryParser_ >> '@')
         >> entryParser_
         >> (-(':' >> qi::ushort_))
-        >> -('/' >> -entryParser_);
+        >> -('/' >> resourceParser_);
 
     methodsParser_.add(methods_g.at(Http_Get), Http_Get)
         (methods_g.at(Http_Post), Http_Post);
@@ -118,7 +116,7 @@ RequestParser::RequestParser()
         >> +spaceParser_
         >> urlParser_
         >> +spaceParser_
-        >> "HTTP1/1"
+        >> "HTTP/1.1"
         >> requestHeadersParser_
         >> "\r\n\r\n";
 }
@@ -126,11 +124,18 @@ RequestParser::RequestParser()
 RequestInfoPtr RequestParser::Parse(ByteArray::iterator& begin
                                    , ByteArray::iterator end)
 {
-    if (HeadersReseived(begin, end))
+    ByteArray::const_iterator it = std::search(begin, end, blankLine_g.begin()
+        , blankLine_g.end());
+
+    if (it != end)
     {
         RemoveFolding(begin, end);
 
         return ParseRequest(begin, end);
+    }
+    else
+    {
+        begin = end;
     }
 
     return RequestInfoPtr();
@@ -142,21 +147,21 @@ RequestInfoPtr RequestParser::ParseRequest(ByteArray::iterator& begin
     RequestTuple res;
     if (qi::parse(begin, end, requestParser_, res))
     {
-        auto headers = boost::fusion::find<boost::optional<StringList>>(res);
-        const ConnectionOptions connectionOptions = ProcessConnectionHeader(*headers);
+        auto headers = *boost::fusion::find<boost::optional<StringList>>(res);
+        const ConnectionOptions connectionOptions = ProcessConnectionHeader(headers);
 
-        auto method = boost::fusion::find<HttpMethods>(res);
-        const std::uint32_t messageLength = MessageBodyLength(*method, *headers);
+        auto method = *boost::fusion::find<HttpMethods>(res);
+        const std::uint32_t messageLength = MessageBodyLength(method, headers);
         
-        auto url = boost::fusion::find<UrlTuple>(res);
-        auto host = boost::fusion::find<std::string>(*url);
-        auto resource = boost::fusion::find<boost::optional<std::string>>(*url);
-        ByteArray requestBuffer = CreateRequestBuffer(*method, *host, *resource, *headers);
+        auto url = *boost::fusion::find<UrlTuple>(res);
+        auto host = *boost::fusion::find<std::string>(url);
+        auto resource = *boost::fusion::find<boost::optional<std::string>>(url);
+        ByteArray requestBuffer = CreateRequestBuffer(method, host, resource, headers);
 
-        auto port = boost::fusion::find<boost::optional<std::uint16_t>>(*url);
+        auto port = *boost::fusion::find<boost::optional<std::uint16_t>>(url);
 
-        return std::make_unique<RequestInfo>(std::move(*host)
-            , (*port).is_initialized() ? *port : 80
+        return std::make_unique<RequestInfo>(std::move(host)
+            , port.is_initialized() ? *port : 80
             , connectionOptions, messageLength, std::move(requestBuffer));
     }
     else

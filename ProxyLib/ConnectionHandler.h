@@ -95,7 +95,7 @@ public:
                 assert((0 < message.BodyLength()) && (state_ == State_WaitData));
 
                 ByteArray::iterator messageEnd = end;
-                if (message.BodyLength() <= std::distance(begin, end))
+                if (message.BodyLength() <= static_cast<std::size_t>(end - begin))
                 {
                     messageEnd = begin + message.BodyLength();
                     state_ = State_WaitMessage;

@@ -25,7 +25,7 @@ std::uint16_t RequestInfo::Port() const
     return port_;
 }
 
-ByteArray& RequestInfo::Buffer()
+const ByteArray& RequestInfo::Buffer() const
 {
     return requestBuffer_;
 }

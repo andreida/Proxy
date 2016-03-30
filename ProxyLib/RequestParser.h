@@ -56,6 +56,7 @@ private:
 
     SpaceParser                    spaceParser_;
     UrlEntryParser                 entryParser_;
+    UrlEntryParser                 resourceParser_;
 
     boost::spirit::qi::symbols<char, HttpMethods> methodsParser_;
     UrlParser                                     urlParser_;
